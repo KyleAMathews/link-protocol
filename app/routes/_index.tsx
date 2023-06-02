@@ -4,33 +4,51 @@ import { json } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 import { useLoaderData } from "@remix-run/react";
 import { PrismaClient } from "@prisma/client";
-import { pick, sortBy, sumBy } from "lodash";
+import { pick, sortBy, sumBy, groupBy } from "lodash";
 
 export const loader = async () => {
   const prisma = new PrismaClient();
-  const messages = await prisma.message.findMany({
-    where: {
-      guildId: `1113425260562366577`,
-    },
-  });
-  console.log({ messages });
-  const picked = messages.map((message) => {
-    const picked = pick(message, [`links`, `reactions`]);
-    picked.links = JSON.parse(picked.links);
-    picked.reactions = JSON.parse(picked.reactions);
+  const messages = await prisma.$queryRaw`
+  SELECT 
+    DATE(datetime(createdTimestamp / 1000, 'unixepoch')) as date,
+	links,
+	reactions
+FROM 
+    Message
+WHERE
+   guildId = "1113425260562366577"
+ORDER BY 
+    date;
+`;
+  // const messages = await prisma.message.findMany({
+  // select: {
+  // links,
+  // reactions,
+  // `DATE(datetime(createdTimestamp / 1000, 'unixepoch')) as date,`
+  // },
+  // where: {
+  // guildId: `1113425260562366577`,
+  // },
+  // });
+  const parsedMessages = messages.map((message) => {
+    message.links = JSON.parse(message.links);
+    message.reactions = JSON.parse(message.reactions);
 
-    return picked;
+    return message;
   });
   const links = [];
-  picked.forEach((message) => {
+  parsedMessages.forEach((message) => {
     message.links.forEach((link) =>
-      links.push({ link, reactions: message.reactions })
+      links.push({ link, reactions: message.reactions, date: message.date })
     );
   });
+
+  const sortedLinks = sortBy(links, (link) =>
+    sumBy(link.reactions, (reaction) => reaction.count)
+  ).reverse();
+  console.log(sortedLinks);
   return json({
-    links: sortBy(links, (link) =>
-      sumBy(link.reactions, (reaction) => reaction.count)
-    ).reverse(),
+    links: groupBy(sortedLinks, `date`),
   });
 };
 
@@ -42,17 +60,23 @@ export default function Index() {
   return (
     <main className="relative min-h-screen bg-white sm:flex">
       <div className="relative sm:p-8">
-        <h1 className="mb-2 text-2xl">Links</h1>
-        {data.links.map((link) => {
+        <h1 className="mb-2 text-3xl font-bold">Links</h1>
+        {Object.entries(data.links).map(([date, links]) => {
           return (
             <div>
-              - {link.link}
-              {` `}
-              {link.reactions?.map((reaction) => (
-                <span>
-                  {reaction.name} {reaction.count}
-                  {`, `}
-                </span>
+              <h2 className="mb-2 text-xl">{date}</h2>
+
+              {links.map((link) => (
+                <div>
+                  - {link.link}
+                  {` `}
+                  {link.reactions?.map((reaction) => (
+                    <span>
+                      {reaction.name} {reaction.count}
+                      {`, `}
+                    </span>
+                  ))}
+                </div>
               ))}
             </div>
           );
