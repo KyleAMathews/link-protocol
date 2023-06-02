@@ -7,13 +7,13 @@ const {
   Commands,
   Collection,
   SlashCommandBuilder,
-} = require("discord.js");
-const path = require("path");
-const fs = require("fs");
+} = require(`discord.js`);
+const path = require(`path`);
+const fs = require(`fs`);
 const _ = require(`lodash`);
 const extractUrls = require(`extract-urls`);
 
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient } = require(`@prisma/client`);
 const prisma = new PrismaClient();
 
 const token = process.env.DISCORD_TOKEN;
@@ -30,16 +30,16 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-const commandsPath = path.join(__dirname, "commands");
+const commandsPath = path.join(__dirname, `commands`);
 const commandFiles = fs
   .readdirSync(commandsPath)
-  .filter((file) => file.endsWith(".js"));
+  .filter((file) => file.endsWith(`.js`));
 
 for (const file of commandFiles) {
   const filePath = path.join(commandsPath, file);
   const command = require(filePath);
   // Set a new item in the Collection with the key as the command name and the value as the exported module
-  if ("data" in command && "execute" in command) {
+  if (`data` in command && `execute` in command) {
     client.commands.set(command.data.name, command);
   } else {
     console.log(
@@ -70,12 +70,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
     console.error(error);
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp({
-        content: "There was an error while executing this command!",
+        content: `There was an error while executing this command!`,
         ephemeral: true,
       });
     } else {
       await interaction.reply({
-        content: "There was an error while executing this command!",
+        content: `There was an error while executing this command!`,
         ephemeral: true,
       });
     }
@@ -108,13 +108,13 @@ client.on([Events.MessageUpdate], async (message) => {
     try {
       await message.fetch();
     } catch (error) {
-      console.error("Something went wrong when fetching the message:", error);
+      console.error(`Something went wrong when fetching the message:`, error);
       // Return as `reaction.message.author` may be undefined/null
       return;
     }
   }
   const fetched = await message.fetch();
-  console.log({fetched})
+  console.log({ fetched });
   await prisma.message.update({
     where: {
       messageId: fetched.id,
@@ -134,7 +134,7 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
     try {
       await reaction.fetch();
     } catch (error) {
-      console.error("Something went wrong when fetching the message:", error);
+      console.error(`Something went wrong when fetching the message:`, error);
       // Return as `reaction.message.author` may be undefined/null
       return;
     }
@@ -149,7 +149,9 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
     `${reaction.count} user(s) have given the same reaction to this message!`
   );
   console.log(`reaction`, reaction);
-  const reactions = reaction.message.reactions.cache.map(reaction => { return { name: reaction._emoji.name, count: reaction.count}})
+  const reactions = reaction.message.reactions.cache.map((reaction) => {
+    return { name: reaction._emoji.name, count: reaction.count };
+  });
   await prisma.message.update({
     where: {
       messageId: reaction.message.id,
