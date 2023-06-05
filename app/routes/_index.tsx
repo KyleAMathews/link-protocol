@@ -48,7 +48,10 @@ ORDER BY
   ).reverse();
   console.log(sortedLinks);
   return json({
-    links: groupBy(sortedLinks, `date`),
+    links: sortBy(
+      Object.entries(groupBy(sortedLinks, `date`)),
+      ([date]) => date
+    ).reverse(),
   });
 };
 
@@ -61,9 +64,9 @@ export default function Index() {
     <main className="relative min-h-screen bg-white sm:flex">
       <div className="relative sm:p-8">
         <h1 className="mb-2 text-3xl font-bold">Links</h1>
-        {Object.entries(data.links).map(([date, links]) => {
+        {data.links.map(([date, links]) => {
           return (
-            <div>
+            <div className="mb-3">
               <h2 className="mb-2 text-xl">{date}</h2>
 
               {links.map((link) => (
