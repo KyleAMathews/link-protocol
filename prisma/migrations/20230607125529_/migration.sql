@@ -6,7 +6,7 @@ CREATE TABLE "Message" (
     "content" TEXT NOT NULL,
     "createdTimestamp" BIGINT NOT NULL,
     "editedTimestamp" BIGINT,
-    "links" TEXT NOT NULL,
+    "links" TEXT,
     "reactions" TEXT
 );
 

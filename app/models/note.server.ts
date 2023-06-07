@@ -1,4 +1,5 @@
 import type { User, Note } from "@prisma/client";
+export * from "../../bot/dao.ts"
 
 import { prisma } from "~/db.server";
 
