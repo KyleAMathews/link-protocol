@@ -1,10 +1,6 @@
-// Require the necessary discord.js classes
-import { prisma, discordClient } from "~/db.server";
-const extractUrls = require(`extract-urls`);
-
-// console.log(`bot.ts`, { token });
 let linkSavedCount = 0;
 async function processMessages(messages) {
+  const extractUrls = require(`extract-urls`);
   messages.forEach(async (message) => {
     const links = JSON.stringify(extractUrls(message.content));
     if (links) {
@@ -13,31 +9,15 @@ async function processMessages(messages) {
           return { name: reaction._emoji.name, count: reaction.count };
         })
       );
-      await prisma.message.upsert({
-        where: {
-          messageId: message.id,
-        },
-        create: {
-          messageId: message.id,
-          guildId: message.guildId,
-          channelId: message.channelId,
-          createdTimestamp: message.createdTimestamp,
-          editedTimestamp: message.editedTimestamp,
-          content: message.content,
-          links,
-          reactions,
-        },
-        update: {
-          messageId: message.id,
-          guildId: message.guildId,
-          channelId: message.channelId,
-          createdTimestamp: message.createdTimestamp,
-          editedTimestamp: message.editedTimestamp,
-          content: message.content,
-          links,
-          reactions,
-        },
-      });
+
+      const messageObj = {
+        ...message,
+        links,
+        reactions,
+      };
+
+      await upsertMessage(messageObj);
+
       linkSavedCount += 1;
       if (linkSavedCount % 10 === 0) {
         console.log(
@@ -54,15 +34,7 @@ async function processMessages(messages) {
 //  Batch retrieve all messages from a given channel
 async function getAllChannelMessages(channel) {
   const batchSize = 100; // Discord won't give us any more
-  // const updateInterval = 10; // Edit progress update message every N batches
   let earliestMessageID = null;
-  // let allMessages = new Map();
-  // progressEmbed.setCurrentlyFetchingChannel(channel.name);
-  // await progressEmbed.updateProgress(
-  // channel.id,
-  // channel.name,
-  // allMessages.size
-  // );
   try {
     let moreMessagesExist = (await channel.messages.fetch({ limit: 1 })).size;
     while (moreMessagesExist) {
@@ -73,16 +45,6 @@ async function getAllChannelMessages(channel) {
       });
       earliestMessageID = data.last().id;
       await processMessages(data);
-      // allMessages = new Map([...allMessages, ...data]);
-      // if (allMessages.size % (batchSize * updateInterval) === 0) {
-      // await progressEmbed.updateProgress(
-      // channel.id,
-      // channel.name,
-      // allMessages.size
-      // );
-      // }
-      // console.log(`allMessages`, allMessages.size)
-      // moreMessagesExist = false;
       moreMessagesExist = (
         await channel.messages.fetch({ limit: 1, before: earliestMessageID })
       ).size;
@@ -95,15 +57,10 @@ async function getAllChannelMessages(channel) {
       console.log({ name: err.name });
     }
   }
-  // await progressEmbed.updateProgress(
-  // channel.id,
-  // channel.name,
-  // allMessages.size
-  // );
-  // return allMessages;
 }
 
 export async function getServers() {
+  const { discordClient } = require(`~/db.server`);
   return discordClient.guilds.cache.map((guild) => {
     return {
       id: guild.id,
@@ -115,28 +72,15 @@ export async function getServers() {
 }
 
 export async function getOldMessagesForGuild(guildId) {
-  let channelFoundCount = 0;
+  const { discordClient } = require(`~/db.server`);
   for (const channel of discordClient.channels.cache.values()) {
     // Filter to Text channels.
     if (channel.guild.id === guildId) {
-      // const { guild, permissionOverwrites, messages, threads, ...other } =
-      // channel;
-      // console.log(other);
       if (
         typeof channel.lastMessageId !== `undefined` &&
         channel.lastMessageId !== null &&
         typeof channel.bitrate === `undefined`
       ) {
-        // console.log(
-        // `good channel`,
-        // channel.id,
-        // channel.name,
-        // channel.messageCount
-        // );
-        channelFoundCount += 1;
-        // if (channelFoundCount > 10) {
-        // return;
-        // }
         await getAllChannelMessages(channel);
       } else {
         // console.log(`bad channel`, channel.id);
@@ -145,9 +89,53 @@ export async function getOldMessagesForGuild(guildId) {
   }
 }
 
-// client.once(Events.ClientReady, async (c) => {
-// deferred.resolve();
-// console.log(`Ready! Logged in as ${c.user.tag}`);
-// // console.log(client.channels.cache);
-// });
-// client.login(token);
+export async function upsertMessage(message) {
+  const { turso } = require(`~/db.server`);
+  let result;
+  try {
+    if (message.links && message.links.length > 0) {
+      const reactions = JSON.stringify(
+        message.reactions.cache.map((reaction) => {
+          return { name: reaction._emoji.name, count: reaction.count };
+        })
+      );
+      result = await turso.execute({
+        sql: `INSERT INTO Message (messageId, channelId, guildId, content, createdTimestamp, editedTimestamp, links, reactions)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (messageId) DO UPDATE SET
+    channelId = excluded.channelId,
+    guildId = excluded.guildId,
+    content = excluded.content,
+    createdTimestamp = excluded.createdTimestamp,
+    editedTimestamp = excluded.editedTimestamp,
+    links = excluded.links,
+    reactions = excluded.reactions;`,
+        args: [
+          message.id,
+          message.guildId,
+          message.channelId,
+          message.content,
+          message.createdTimestamp,
+          message.editedTimestamp,
+          message.links,
+          reactions,
+        ],
+      });
+    } else {
+      try {
+        await turso.execute({
+          sql: `DELETE FROM Message WHERE messageId = ?;`,
+          args: [message.id],
+        });
+      } catch (e) {
+        console.log(e);
+        // Ignore if the row doesn't exist.
+      }
+    }
+  } catch (e) {
+    console.log(e);
+    result = e;
+  }
+
+  return result;
+}

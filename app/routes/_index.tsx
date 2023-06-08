@@ -3,14 +3,14 @@ import type { V2_MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 import { useLoaderData } from "@remix-run/react";
-import { PrismaClient } from "@prisma/client";
 import { sortBy, sumBy, groupBy } from "lodash";
 
-const guildId = `1082444651946049567`;
+const guildId = `1113425261128593550`;
 
 export const loader = async () => {
-  const prisma = new PrismaClient();
-  const messages = await prisma.$queryRaw`
+  const { turso } = require(`../db.server.ts`);
+  const messages = await turso.execute({
+    sql: `
   SELECT 
     DATE(datetime(createdTimestamp / 1000, 'unixepoch')) as date,
 	links,
@@ -20,25 +20,20 @@ export const loader = async () => {
 FROM 
     Message
 WHERE
-   guildId = "1082444651946049567"
+   guildId = ?
 ORDER BY 
     date;
-`;
-  // const messages = await prisma.message.findMany({
-  // select: {
-  // links,
-  // reactions,
-  // `DATE(datetime(createdTimestamp / 1000, 'unixepoch')) as date,`
-  // },
-  // where: {
-  // guildId: `1113425260562366577`,
-  // },
-  // });
-  const parsedMessages = messages.map((message) => {
-    message.links = JSON.parse(message.links);
-    message.reactions = JSON.parse(message.reactions);
+`,
+    args: [guildId],
+  });
+  const parsedMessages = messages.rows.map((message) => {
+    const newMessage = {
+      ...message,
+      links: JSON.parse(message.links),
+      reactions: JSON.parse(message.reactions),
+    };
 
-    return message;
+    return newMessage;
   });
   const links = [];
   parsedMessages.forEach((message) => {
@@ -56,7 +51,6 @@ ORDER BY
   const sortedLinks = sortBy(links, (link) =>
     sumBy(link.reactions, (reaction) => reaction.count)
   ).reverse();
-  // console.log(sortedLinks);
   return json({
     links: sortBy(
       Object.entries(groupBy(sortedLinks, `date`)),
@@ -90,7 +84,14 @@ export default function Index() {
                         {`, `}
                       </span>
                     ))}
-                    <span><a className="underline text-blue-500" href={`https://discordapp.com/channels/${guildId}/${link.channelId}/${link.messageId}`}>discord link</a></span>
+                    <span>
+                      <a
+                        className="text-blue-500 underline"
+                        href={`https://discordapp.com/channels/${guildId}/${link.channelId}/${link.messageId}`}
+                      >
+                        discord link
+                      </a>
+                    </span>
                   </div>
                 );
               })}

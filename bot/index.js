@@ -1,63 +1,39 @@
-// Require the necessary discord.js classes
-const {
-  Client,
-  Events,
-  GatewayIntentBits,
-  Partials,
-  Commands,
-  Collection,
-  SlashCommandBuilder,
-} = require(`discord.js`);
+const { upsertMessage } = require(`../bot/dao`);
 const path = require(`path`);
 const fs = require(`fs`);
 const _ = require(`lodash`);
 const extractUrls = require(`extract-urls`);
+const { Events } = require(`discord.js`);
 
-const { PrismaClient } = require(`@prisma/client`);
-const prisma = new PrismaClient();
+// discordClient.commands = new Collection();
+// const commandsPath = path.join(__dirname, `commands`);
+// const commandFiles = fs
+// .readdirSync(commandsPath)
+// .filter((file) => file.endsWith(`.js`));
 
-const token = process.env.DISCORD_TOKEN;
+// for (const file of commandFiles) {
+// const filePath = path.join(commandsPath, file);
+// const command = require(filePath);
+// // Set a new item in the Collection with the key as the command name and the value as the exported module
+// if (`data` in command && `execute` in command) {
+// discordClient.commands.set(command.data.name, command);
+// } else {
+// console.log(
+// `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+// );
+// }
+// }
 
-// Create a new client instance
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions,
-  ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
-});
+const { discordClient } = require(`../app/db.server`);
 
-client.commands = new Collection();
-const commandsPath = path.join(__dirname, `commands`);
-const commandFiles = fs
-  .readdirSync(commandsPath)
-  .filter((file) => file.endsWith(`.js`));
+console.log(`listening to discord server events`);
 
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file);
-  const command = require(filePath);
-  // Set a new item in the Collection with the key as the command name and the value as the exported module
-  if (`data` in command && `execute` in command) {
-    client.commands.set(command.data.name, command);
-  } else {
-    console.log(
-      `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
-    );
-  }
-}
-
-// When the client is ready, run this code (only once)
-// We use 'c' for the event parameter to keep it separate from the already defined 'client'
-client.once(Events.ClientReady, (c) => {
-  console.log(`Ready! Logged in as ${c.user.tag}`);
-});
-
-client.on(Events.InteractionCreate, async (interaction) => {
+discordClient.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  const command = interaction.client.commands.get(interaction.commandName);
+  const command = interaction.discordClient.commands.get(
+    interaction.commandName
+  );
 
   if (!command) {
     console.error(`No command matching ${interaction.commandName} was found.`);
@@ -82,27 +58,24 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
-client.on([Events.MessageCreate], async (message) => {
+discordClient.on([Events.MessageCreate], async (message) => {
   console.log(`message create`, message);
   const links = JSON.stringify(extractUrls(message.content));
   if (links) {
-    const result = await prisma.message.create({
-      data: {
-        messageId: message.id,
-        guildId: message.guildId,
-        channelId: message.channelId,
-        createdTimestamp: message.createdTimestamp,
-        editedTimestamp: message.editedTimestamp,
-        content: message.content,
-        links,
-        // reactions: [{ name: `👍`, count: 1 }],
-      },
+    const result = await upsertMessage({
+      messageId: message.id,
+      guildId: message.guildId,
+      channelId: message.channelId,
+      createdTimestamp: message.createdTimestamp,
+      editedTimestamp: message.editedTimestamp,
+      content: message.content,
+      links,
     });
 
     console.log({ result });
   }
 });
-client.on([Events.MessageUpdate], async (message) => {
+discordClient.on([Events.MessageUpdate], async (message) => {
   if (message.partial) {
     // If the message this reaction belongs to was removed, the fetching might result in an API error which should be handled
     try {
@@ -114,20 +87,13 @@ client.on([Events.MessageUpdate], async (message) => {
     }
   }
   const fetched = await message.fetch();
-  console.log({ fetched });
-  await prisma.message.update({
-    where: {
-      messageId: fetched.id,
-    },
-    data: {
-      editedTimestamp: fetched.editedTimestamp,
-      content: fetched.content,
-      links: JSON.stringify(extractUrls(fetched.content)),
-    },
+  await upsertMessage({
+    ...fetched,
+    links: JSON.stringify(extractUrls(fetched.content)),
   });
 });
 
-client.on(Events.MessageReactionAdd, async (reaction, user) => {
+discordClient.on(Events.MessageReactionAdd, async (reaction, user) => {
   // When a reaction is received, check if the structure is partial
   if (reaction.partial) {
     // If the message this reaction belongs to was removed, the fetching might result in an API error which should be handled
@@ -148,19 +114,8 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
   console.log(
     `${reaction.count} user(s) have given the same reaction to this message!`
   );
-  console.log(`reaction`, reaction);
-  const reactions = reaction.message.reactions.cache.map((reaction) => {
-    return { name: reaction._emoji.name, count: reaction.count };
-  });
-  await prisma.message.update({
-    where: {
-      messageId: reaction.message.id,
-    },
-    data: {
-      reactions: JSON.stringify(reactions),
-    },
+  await upsertMessage({
+    ...reaction.message,
+    links: JSON.stringify(extractUrls(reaction.message.content)),
   });
 });
-
-// Log in to Discord with your client's token
-client.login(token);
