@@ -1,19 +1,17 @@
-let linkSavedCount = 0;
+let linkSavedCount
 async function processMessages(messages) {
+  if (!global.__linkSavedCount) {
+    global.__linkSavedCount = 0;
+  }
+
+  linkSavedCount = global.__linkSavedCount
   const extractUrls = require(`extract-urls`);
   messages.forEach(async (message) => {
     const links = JSON.stringify(extractUrls(message.content));
     if (links) {
-      const reactions = JSON.stringify(
-        message.reactions.cache.map((reaction) => {
-          return { name: reaction._emoji.name, count: reaction.count };
-        })
-      );
-
       const messageObj = {
         ...message,
         links,
-        reactions,
       };
 
       await upsertMessage(messageObj);

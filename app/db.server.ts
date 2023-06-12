@@ -16,6 +16,22 @@ const token = process.env.DISCORD_TOKEN;
 
 console.log(process.env.NODE_ENV);
 
+function setLocalsFromGlobals() {
+  turso = global.__db__;
+  discordClient = global.__discord__;
+}
+
+function login() {
+  discordClient = global.__discord__;
+  discordClient.login(token);
+  discordClient.once(Events.ClientReady, async (c) => {
+    console.log(`Ready! Logged in as ${c.user.tag}`);
+    require(`../bot/index`);
+  });
+
+  setLocalsFromGlobals();
+}
+
 // This is needed because in development we don't want to restart
 // the server with every change, but we want to make sure we don't
 // create a new connection to the DB with every change either.
@@ -36,6 +52,8 @@ if (process.env.NODE_ENV === `production`) {
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   });
+
+  login();
 } else {
   if (!global.__db__) {
     global.__db__ = createClient({
@@ -51,17 +69,11 @@ if (process.env.NODE_ENV === `production`) {
       ],
       partials: [Partials.Message, Partials.Channel, Partials.Reaction],
     });
+
+    login();
   }
+
+  setLocalsFromGlobals();
 }
-
-discordClient = global.__discord__;
-discordClient.login(token);
-discordClient.once(Events.ClientReady, async (c) => {
-  console.log(`Ready! Logged in as ${c.user.tag}`);
-  require(`../bot/index`);
-});
-
-turso = global.__db__;
-discordClient = global.__discord__;
 
 export { turso, discordClient };
