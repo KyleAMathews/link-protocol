@@ -29,7 +29,7 @@ if (process.env.NODE_ENV === `production`) {
   });
   // Create discord client & return promise that resolves with it once it's ready.
   // Create a new client instance
-  discordClient = new Client({
+  global.__discord__ = new Client({
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
@@ -52,13 +52,14 @@ if (process.env.NODE_ENV === `production`) {
       ],
       partials: [Partials.Message, Partials.Channel, Partials.Reaction],
     });
-    discordClient = global.__discord__;
-    discordClient.login(token);
-    discordClient.once(Events.ClientReady, async (c) => {
-      console.log(`Ready! Logged in as ${c.user.tag}`);
-      require(`../bot/index`);
-    });
   }
+
+  discordClient = global.__discord__;
+  discordClient.login(token);
+  discordClient.once(Events.ClientReady, async (c) => {
+    console.log(`Ready! Logged in as ${c.user.tag}`);
+    require(`../bot/index`);
+  });
 
   turso = global.__db__;
   discordClient = global.__discord__;
