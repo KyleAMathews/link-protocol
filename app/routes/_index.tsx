@@ -79,7 +79,7 @@ export default function Index() {
               {links.map((link) => {
                 return (
                   <div>
-                    - {link.link}
+                    - <a href="{link.link}">{link.link}</a>
                     {` `}
                     {link.reactions?.map((reaction) => (
                       <span>
