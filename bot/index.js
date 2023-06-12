@@ -59,11 +59,11 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
 });
 
 discordClient.on([Events.MessageCreate], async (message) => {
-  console.log(`message create`, message);
   const links = JSON.stringify(extractUrls(message.content));
   if (links) {
+    console.log(`message create`, message);
     const result = await upsertMessage({
-      messageId: message.id,
+      id: message.id,
       guildId: message.guildId,
       channelId: message.channelId,
       createdTimestamp: message.createdTimestamp,
@@ -71,11 +71,10 @@ discordClient.on([Events.MessageCreate], async (message) => {
       content: message.content,
       links,
     });
-
-    console.log({ result });
   }
 });
 discordClient.on([Events.MessageUpdate], async (message) => {
+  console.log(`message updated`)
   if (message.partial) {
     // If the message this reaction belongs to was removed, the fetching might result in an API error which should be handled
     try {

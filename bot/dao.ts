@@ -1,10 +1,10 @@
-let linkSavedCount
+let linkSavedCount;
 async function processMessages(messages) {
   if (!global.__linkSavedCount) {
     global.__linkSavedCount = 0;
   }
 
-  linkSavedCount = global.__linkSavedCount
+  linkSavedCount = global.__linkSavedCount;
   const extractUrls = require(`extract-urls`);
   messages.forEach(async (message) => {
     const links = JSON.stringify(extractUrls(message.content));
@@ -92,11 +92,13 @@ export async function upsertMessage(message) {
   let result;
   try {
     if (message.links && message.links.length > 0) {
-      const reactions = JSON.stringify(
-        message.reactions.cache.map((reaction) => {
-          return { name: reaction._emoji.name, count: reaction.count };
-        })
-      );
+      const reactions =
+        JSON.stringify(
+          message.reactions?.cache.map((reaction) => {
+            return { name: reaction._emoji.name, count: reaction.count };
+          })
+        ) || `[]`;
+
       result = await turso.execute({
         sql: `INSERT INTO Message (messageId, channelId, guildId, content, createdTimestamp, editedTimestamp, links, reactions)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
