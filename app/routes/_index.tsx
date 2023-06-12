@@ -8,7 +8,7 @@ import { sortBy, sumBy, groupBy } from "lodash";
 // Kyle's test server.
 // const guildId = `1113425261128593550`;
 // SOP
-const guildId = `1082461870578995212`;
+const guildId = `1082444651946049567`;
 
 export const loader = async () => {
   const { turso } = require(`../db.server.ts`);

@@ -110,8 +110,8 @@ ON CONFLICT (messageId) DO UPDATE SET
     reactions = excluded.reactions;`,
         args: [
           message.id,
-          message.guildId,
           message.channelId,
+          message.guildId,
           message.content,
           message.createdTimestamp,
           message.editedTimestamp,
