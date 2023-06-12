@@ -5,7 +5,10 @@ import { Link } from "@remix-run/react";
 import { useLoaderData } from "@remix-run/react";
 import { sortBy, sumBy, groupBy } from "lodash";
 
-const guildId = `1113425261128593550`;
+// Kyle's test server.
+// const guildId = `1113425261128593550`;
+// SOP
+const guildId = `1082461870578995212`;
 
 export const loader = async () => {
   const { turso } = require(`../db.server.ts`);
@@ -22,7 +25,7 @@ FROM
 WHERE
    guildId = ?
 ORDER BY 
-    date;
+    date DESC;
 `,
     args: [guildId],
   });
