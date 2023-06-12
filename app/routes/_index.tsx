@@ -79,7 +79,10 @@ export default function Index() {
               {links.map((link) => {
                 return (
                   <div>
-                    - <a href="{link.link}">{link.link}</a>
+                    -{` `}
+                    <a className="underline decoration-gray-400 decoration-dotted" href={link.link}>
+                      {link.link}
+                    </a>
                     {` `}
                     {link.reactions?.map((reaction) => (
                       <span>
