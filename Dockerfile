@@ -1,27 +1,13 @@
 # base node image
 FROM node:18-bullseye-slim as base
 
-# set for base and all layer that inherit from it
-ENV NODE_ENV production
-
-# Install openssl for Prisma
-# RUN apt-get update && apt-get install -y openssl sqlite3
-
 # Install all node_modules, including dev dependencies
 FROM base as deps
 
 WORKDIR /myapp
 
 ADD package.json yarn.lock .npmrc ./
-RUN yarn install --include=dev
-
-# Setup production node_modules
-FROM base as production-deps
-
-WORKDIR /myapp
-
-COPY --from=deps /myapp/node_modules /myapp/node_modules
-ADD package.json yarn.lock .npmrc ./
+RUN yarn install
 
 # Build the app
 FROM base as build
@@ -41,7 +27,7 @@ ENV NODE_ENV="production"
 
 WORKDIR /myapp
 
-COPY --from=production-deps /myapp/node_modules /myapp/node_modules
+COPY --from=deps /myapp/node_modules /myapp/node_modules
 
 COPY --from=build /myapp/build /myapp/build
 COPY --from=build /myapp/public /myapp/public
