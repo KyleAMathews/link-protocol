@@ -24,7 +24,8 @@ const token = process.env.DISCORD_TOKEN;
 // In production, we'll have a single connection to the DB.
 if (process.env.NODE_ENV === `production`) {
   turso = createClient({
-    url: `file:turso/data.db`,
+    url: process.env.VITE_TURSO_DB_URL,
+    authToken: process.env.VITE_TURSO_DB_AUTH_TOKEN,
   });
   // Create discord client & return promise that resolves with it once it's ready.
   // Create a new client instance
