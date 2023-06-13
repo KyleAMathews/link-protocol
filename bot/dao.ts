@@ -87,6 +87,19 @@ export async function getOldMessagesForGuild(guildId) {
   }
 }
 
+export async function deleteMessage(messageId) {
+  const { turso } = require(`~/db.server`);
+  try {
+    await turso.execute({
+      sql: `DELETE FROM Message WHERE messageId = ?;`,
+      args: [messageId],
+    });
+  } catch (e) {
+    console.log(e);
+    // Ignore if the row doesn't exist.
+  }
+}
+
 export async function upsertMessage(message) {
   const { turso } = require(`~/db.server`);
   let result;
@@ -122,15 +135,7 @@ ON CONFLICT (messageId) DO UPDATE SET
         ],
       });
     } else {
-      try {
-        await turso.execute({
-          sql: `DELETE FROM Message WHERE messageId = ?;`,
-          args: [message.id],
-        });
-      } catch (e) {
-        console.log(e);
-        // Ignore if the row doesn't exist.
-      }
+      deleteMessage(message.id);
     }
   } catch (e) {
     console.log(e);

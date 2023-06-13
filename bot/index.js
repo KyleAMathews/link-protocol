@@ -1,4 +1,4 @@
-const { upsertMessage } = require(`../bot/dao`);
+const { upsertMessage, deleteMessage } = require(`../bot/dao`);
 const path = require(`path`);
 const fs = require(`fs`);
 const _ = require(`lodash`);
@@ -61,7 +61,7 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
 discordClient.on([Events.MessageCreate], async (message) => {
   const links = JSON.stringify(extractUrls(message.content));
   if (links) {
-    console.log(`message create`, message);
+    console.log(`message created`, message.id, message.content);
     const result = await upsertMessage({
       id: message.id,
       guildId: message.guildId,
@@ -74,7 +74,7 @@ discordClient.on([Events.MessageCreate], async (message) => {
   }
 });
 discordClient.on([Events.MessageUpdate], async (message) => {
-  console.log(`message updated`)
+  console.log(`message updated`, message.content);
   if (message.partial) {
     // If the message this reaction belongs to was removed, the fetching might result in an API error which should be handled
     try {
@@ -90,6 +90,11 @@ discordClient.on([Events.MessageUpdate], async (message) => {
     ...fetched,
     links: JSON.stringify(extractUrls(fetched.content)),
   });
+});
+
+discordClient.on([Events.MessageDelete], async (message) => {
+  console.log(`message deleted`, message.id, message.content);
+  deleteMessage(message.id);
 });
 
 discordClient.on(Events.MessageReactionAdd, async (reaction, user) => {
