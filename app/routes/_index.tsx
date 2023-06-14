@@ -4,6 +4,7 @@ import { json } from "@remix-run/node"
 import { Link } from "@remix-run/react"
 import { useLoaderData } from "@remix-run/react"
 import { sortBy, sumBy, groupBy } from "lodash"
+import opentelemetry from "@opentelemetry/api"
 
 // Kyle's test server.
 // const guildId = `1113425261128593550`;
@@ -11,9 +12,15 @@ import { sortBy, sumBy, groupBy } from "lodash"
 const guildId = `1082444651946049567`
 
 export const loader = async () => {
-  const { turso } = require(`../db.server.ts`)
-  const messages = await turso.execute({
-    sql: `
+  const tracer = opentelemetry.trace.getTracer(`remix`)
+  return tracer.startActiveSpan(`route._index.loader`, async (span) => {
+    span.setAttribute(`guildId`, guildId)
+    const { turso } = require(`../db.server.ts`)
+    const messages = await tracer.startActiveSpan(
+      `route._index.loader.query`,
+      async (span) => {
+        const result = await turso.execute({
+          sql: `
   SELECT 
     DATE(datetime(createdTimestamp / 1000, 'unixepoch')) as date,
 	links,
@@ -27,38 +34,47 @@ WHERE
 ORDER BY 
     date DESC;
 `,
-    args: [guildId],
-  })
-  const parsedMessages = messages.rows.map((message) => {
-    const newMessage = {
-      ...message,
-      links: JSON.parse(message.links),
-      reactions: JSON.parse(message.reactions),
-    }
+          args: [guildId],
+        })
 
-    return newMessage
-  })
-  const links = []
-  parsedMessages.forEach((message) => {
-    message.links.forEach((link) =>
-      links.push({
-        link,
-        reactions: message.reactions,
-        date: message.date,
-        channelId: message.channelId,
-        messageId: message.messageId,
-      })
+        span.end()
+        return result
+      }
     )
-  })
+    const parsedMessages = messages.rows.map((message) => {
+      const newMessage = {
+        ...message,
+        links: JSON.parse(message.links),
+        reactions: JSON.parse(message.reactions),
+      }
 
-  const sortedLinks = sortBy(links, (link) =>
-    sumBy(link.reactions, (reaction) => reaction.count)
-  ).reverse()
-  return json({
-    links: sortBy(
-      Object.entries(groupBy(sortedLinks, `date`)),
-      ([date]) => date
-    ).reverse(),
+      return newMessage
+    })
+    const links = []
+    parsedMessages.forEach((message) => {
+      message.links.forEach((link) =>
+        links.push({
+          link,
+          reactions: message.reactions,
+          date: message.date,
+          channelId: message.channelId,
+          messageId: message.messageId,
+        })
+      )
+    })
+
+    const sortedLinks = sortBy(links, (link) =>
+      sumBy(link.reactions, (reaction) => reaction.count)
+    ).reverse()
+    const result = {
+      links: sortBy(
+        Object.entries(groupBy(sortedLinks, `date`)),
+        ([date]) => date
+      ).reverse(),
+    }
+    span.end()
+
+    return json(result)
   })
 }
 
