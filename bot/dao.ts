@@ -150,8 +150,8 @@ ON CONFLICT (messageId) DO UPDATE SET
 exports.createSubscriptions = async ({ categories, userId, guildId, sql }) => {
   // Delete any existing subscriptions for the user first.
   await sql.execute({
-    sql: `DELETE FROM Subscription where userId = ?`,
-    args: [userId],
+    sql: `DELETE FROM Subscription where userId = ? AND guildId = ?`,
+    args: [userId, guildId],
   })
 
   for (const category of categories) {

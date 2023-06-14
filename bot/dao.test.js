@@ -39,6 +39,12 @@ test(`createSubscriptions`, async () => {
     guildId: `123`,
     sql,
   })
+  await createSubscriptions({
+    categories: [`🕸`],
+    userId: `1234`,
+    guildId: `123`,
+    sql,
+  })
 
   const categories = await getSubscriptionsForUser({
     userId: `123`,
