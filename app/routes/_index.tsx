@@ -14,7 +14,7 @@ const guildId = `1082444651946049567`
 export const loader = async () => {
   const tracer = opentelemetry.trace.getTracer(`remix`)
   return tracer.startActiveSpan(`route._index.loader`, async (span) => {
-    span.setAttribute(`guildId`, guildId)
+    span.setAttribute(`discord.guildId`, guildId)
     const { turso } = require(`../db.server.ts`)
     const messages = await tracer.startActiveSpan(
       `route._index.loader.query`,
