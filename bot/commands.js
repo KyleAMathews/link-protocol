@@ -1,6 +1,6 @@
 const fs = require(`node:fs`)
 const { Events, Collection } = require(`discord.js`)
-const { discordClient } = require(`../app/db.server`)
+const { discordClient } = require(`../app/db.server.ts`)
 const path = require(`node:path`)
 
 discordClient.commands = new Collection()

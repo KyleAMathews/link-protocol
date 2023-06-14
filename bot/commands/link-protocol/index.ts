@@ -5,9 +5,7 @@ const {
   StringSelectMenuOptionBuilder,
 } = require(`discord.js`)
 const arrayToSentence = require(`array-to-sentence`)
-console.log(`dirname`, __dirname)
 const { createSubscriptions, getSubscriptionsForUser } = require(`../../dao.ts`)
-const { turso } = require(`../../../app/db.server.ts`)
 
 const categories = [
   {
@@ -55,9 +53,8 @@ module.exports = {
         )
     ),
   async execute(interaction) {
-    if (interaction.options._subcommand === `help`) {
-      return interaction.reply(`here's help!`)
-    } else if (interaction.options._subcommand === `manage-subscriptions`) {
+    const { turso } = require(`../../../app/db.server.ts`)
+    if (interaction.options._subcommand === `manage-subscriptions`) {
       const subscriptions = await getSubscriptionsForUser({
         userId: interaction.user.id,
         guildId: interaction.guild.id,

@@ -3,7 +3,7 @@ const path = require(`path`)
 const extractUrls = require(`extract-urls`)
 const { Events } = require(`discord.js`)
 
-const { discordClient } = require(`../app/db.server`)
+const { discordClient } = require(`../app/db.server.ts`)
 
 console.log(`listening to discord server events`)
 

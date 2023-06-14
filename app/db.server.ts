@@ -21,8 +21,8 @@ function login() {
   discordClient.login(token)
   discordClient.once(Events.ClientReady, async (c) => {
     console.log(`Ready! Logged in as ${c.user.tag}`)
-    import(`../bot/index`)
-    import(`../bot/commands`)
+    require(`../bot/index.js`)
+    require(`../bot/commands.js`)
   })
 
   setLocalsFromGlobals()
@@ -33,23 +33,28 @@ function login() {
 // create a new connection to the DB with every change either.
 // In production, we'll have a single connection to the DB.
 if (process.env.NODE_ENV === `production`) {
-  console.log(`setting up db for prod`)
-  global.__sql__ = createClient({
-    url: process.env.VITE_TURSO_DB_URL,
-    authToken: process.env.VITE_TURSO_DB_AUTH_TOKEN,
-  })
-  // Create a new client instance
-  global.__discord__ = new Client({
-    intents: [
-      GatewayIntentBits.Guilds,
-      GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.MessageContent,
-      GatewayIntentBits.GuildMessageReactions,
-    ],
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
-  })
+  const loggedIn = !!global.__sql__
+  if (!global.__sql__) {
+    global.__sql__ = createClient({
+      url: process.env.VITE_TURSO_DB_URL,
+      authToken: process.env.VITE_TURSO_DB_AUTH_TOKEN,
+    })
+    global.__lmdb__ = open({ path: `lmdb.db`, compression: true })
+    // Create a new client instance
+    global.__discord__ = new Client({
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions,
+      ],
+      partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+    })
 
-  login()
+    login()
+  }
+
+  setLocalsFromGlobals()
 } else {
   if (!global.__sql__) {
     global.__sql__ = createClient({
@@ -69,8 +74,6 @@ if (process.env.NODE_ENV === `production`) {
 
     login()
   }
-
-  setLocalsFromGlobals()
 }
 
 module.exports = { turso, discordClient, lmdb }

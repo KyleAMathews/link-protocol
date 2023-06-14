@@ -58,7 +58,7 @@ async function getAllChannelMessages(channel) {
 }
 
 exports.getServers = async () => {
-  const { discordClient } = require(`~/db.server`)
+  const { discordClient } = require(`../app/db.server.ts`)
   return discordClient.guilds.cache.map((guild) => {
     return {
       id: guild.id,
@@ -70,7 +70,7 @@ exports.getServers = async () => {
 }
 
 exports.getOldMessagesForGuild = async (guildId) => {
-  const { discordClient } = require(`~/db.server`)
+  const { discordClient } = require(`../app/db.server.ts`)
   for (const channel of discordClient.channels.cache.values()) {
     // Filter to Text channels.
     if (channel.guild.id === guildId) {
@@ -87,8 +87,8 @@ exports.getOldMessagesForGuild = async (guildId) => {
   }
 }
 
-exports.deleteMessage = async (messageId) => {
-  const { turso } = require(`~/db.server`)
+const deleteMessage = async (messageId) => {
+  const { turso } = require(`../app/db.server.ts`)
   try {
     await turso.execute({
       sql: `DELETE FROM Message WHERE messageId = ?;`,
@@ -99,9 +99,10 @@ exports.deleteMessage = async (messageId) => {
     // Ignore if the row doesn't exist.
   }
 }
+exports.deleteMessage = deleteMessage
 
 exports.upsertMessage = async (message) => {
-  const { turso } = require(`~/db.server`)
+  const { turso } = require(`../app/db.server.ts`)
   let result
   try {
     if (message.links && message.links.length > 0) {

@@ -2,7 +2,6 @@ import { beforeAll, assert, expect, test } from "vitest"
 import {
   createSubscriptions,
   getSubscriptionsForUser,
-  getSubscribersForCategory,
   getSubscribersToNotify,
 } from "./dao"
 import { open } from "lmdb"
@@ -49,15 +48,6 @@ test(`createSubscriptions`, async () => {
 
   expect(categories).toHaveLength(1)
   expect(categories[0]).toEqual(`🕸`)
-})
-
-test(`getSubscribersForCategory`, async () => {
-  const users = await getSubscribersForCategory({
-    guildId: `123`,
-    category: `🕸`,
-    sql,
-  })
-  expect(users).toEqual([`123`])
 })
 
 test(`createSubscriptions deletes now unpicked categories`, async () => {
