@@ -1,76 +1,76 @@
-let linkSavedCount;
+let linkSavedCount
 async function processMessages(messages) {
   if (!global.__linkSavedCount) {
-    global.__linkSavedCount = 0;
+    global.__linkSavedCount = 0
   }
 
-  linkSavedCount = global.__linkSavedCount;
-  const extractUrls = require(`extract-urls`);
+  linkSavedCount = global.__linkSavedCount
+  const extractUrls = require(`extract-urls`)
   messages.forEach(async (message) => {
-    const links = JSON.stringify(extractUrls(message.content));
+    const links = JSON.stringify(extractUrls(message.content))
     if (links) {
       const messageObj = {
         ...message,
         links,
-      };
+      }
 
-      await upsertMessage(messageObj);
+      await upsertMessage(messageObj)
 
-      linkSavedCount += 1;
+      linkSavedCount += 1
       if (linkSavedCount % 10 === 0) {
         console.log(
-          `saved link to db for`,
+          `saved link to sql for`,
           message.channel?.name,
           `total links`,
           linkSavedCount
-        );
+        )
       }
     }
-  });
+  })
 }
 
 //  Batch retrieve all messages from a given channel
 async function getAllChannelMessages(channel) {
-  const batchSize = 100; // Discord won't give us any more
-  let earliestMessageID = null;
+  const batchSize = 100 // Discord won't give us any more
+  let earliestMessageID = null
   try {
-    let moreMessagesExist = (await channel.messages.fetch({ limit: 1 })).size;
+    let moreMessagesExist = (await channel.messages.fetch({ limit: 1 })).size
     while (moreMessagesExist) {
       // While the channel has at least one result
       const data = await channel.messages.fetch({
         limit: batchSize,
         before: earliestMessageID,
-      });
-      earliestMessageID = data.last().id;
-      await processMessages(data);
+      })
+      earliestMessageID = data.last().id
+      await processMessages(data)
       moreMessagesExist = (
         await channel.messages.fetch({ limit: 1, before: earliestMessageID })
-      ).size;
+      ).size
     }
   } catch (err) {
     if (err.name !== `DiscordAPIError[50001]`) {
       console.error(
         `Error occurred while extracting messages from #${channel.name}: ${err}`
-      );
-      console.log({ name: err.name });
+      )
+      console.log({ name: err.name })
     }
   }
 }
 
-export async function getServers() {
-  const { discordClient } = require(`~/db.server`);
+exports.getServers = async () => {
+  const { discordClient } = require(`~/db.server`)
   return discordClient.guilds.cache.map((guild) => {
     return {
       id: guild.id,
       name: guild.name,
       icon: guild.icon,
       channelsSize: guild.channels.cache.size,
-    };
-  });
+    }
+  })
 }
 
-export async function getOldMessagesForGuild(guildId) {
-  const { discordClient } = require(`~/db.server`);
+exports.getOldMessagesForGuild = async (guildId) => {
+  const { discordClient } = require(`~/db.server`)
   for (const channel of discordClient.channels.cache.values()) {
     // Filter to Text channels.
     if (channel.guild.id === guildId) {
@@ -79,7 +79,7 @@ export async function getOldMessagesForGuild(guildId) {
         channel.lastMessageId !== null &&
         typeof channel.bitrate === `undefined`
       ) {
-        await getAllChannelMessages(channel);
+        await getAllChannelMessages(channel)
       } else {
         // console.log(`bad channel`, channel.id);
       }
@@ -87,33 +87,34 @@ export async function getOldMessagesForGuild(guildId) {
   }
 }
 
-export async function deleteMessage(messageId) {
-  const { turso } = require(`~/db.server`);
+exports.deleteMessage = async (messageId) => {
+  const { turso } = require(`~/db.server`)
   try {
     await turso.execute({
       sql: `DELETE FROM Message WHERE messageId = ?;`,
       args: [messageId],
-    });
+    })
   } catch (e) {
-    console.log(e);
+    console.log(e)
     // Ignore if the row doesn't exist.
   }
 }
 
-export async function upsertMessage(message) {
-  const { turso } = require(`~/db.server`);
-  let result;
+exports.upsertMessage = async (message) => {
+  const { turso } = require(`~/db.server`)
+  let result
   try {
     if (message.links && message.links.length > 0) {
       const reactions =
         JSON.stringify(
           message.reactions?.cache.map((reaction) => {
-            return { name: reaction._emoji.name, count: reaction.count };
+            return { name: reaction._emoji.name, count: reaction.count }
           })
-        ) || `[]`;
+        ) || `[]`
 
       result = await turso.execute({
-        sql: `INSERT INTO Message (messageId, channelId, guildId, content, createdTimestamp, editedTimestamp, links, reactions)
+        sql: `INSERT INTO
+Message (messageId, channelId, guildId, content, createdTimestamp, editedTimestamp, links, reactions)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (messageId) DO UPDATE SET
     channelId = excluded.channelId,
@@ -133,14 +134,80 @@ ON CONFLICT (messageId) DO UPDATE SET
           message.links,
           reactions,
         ],
-      });
+      })
     } else {
-      deleteMessage(message.id);
+      deleteMessage(message.id)
     }
   } catch (e) {
-    console.log(e);
-    result = e;
+    console.log(e)
+    result = e
   }
 
-  return result;
+  return result
+}
+
+exports.createSubscriptions = async ({ categories, userId, guildId, sql }) => {
+  // Delete any existing subscriptions for the user first.
+  await sql.execute({
+    sql: `DELETE FROM Subscription where userId = ?`,
+    args: [userId],
+  })
+
+  for (const category of categories) {
+    await sql.execute({
+      sql: `INSERT INTO
+    Subscription (category, userId, guildId, createdTimestamp)
+    VALUES (?, ?, ?, ?)`,
+      args: [category, userId, guildId, new Date().getTime()],
+    })
+  }
+}
+
+exports.getSubscriptionsForUser = async ({ userId, guildId, sql }) => {
+  const res = await sql.execute({
+    sql: `SELECT category FROM
+    Subscription 
+    WHERE
+      userId = ? AND
+      guildId = ?`,
+    args: [userId, guildId],
+  })
+
+  return res.rows.map((row) => row.category)
+}
+
+const getSubscribersForCategory = async ({ category, guildId, sql }) => {
+  const res = await sql.execute({
+    sql: `SELECT userId FROM
+    Subscription 
+    WHERE
+      category = ? AND
+      guildId = ?`,
+    args: [category, guildId],
+  })
+
+  return res.rows.map((row) => row.userId)
+}
+
+exports.getSubscribersToNotify = async ({
+  category,
+  guildId,
+  messageId,
+  sql,
+  lmdb,
+}) => {
+  const key = `notificationsSent::${category}::${messageId}`
+  const sentAlready = lmdb.get(key) || false
+  await lmdb.put(key, true)
+  console.log({ key, sentAlready })
+  if (!sentAlready) {
+    const subscribers = await getSubscribersForCategory({
+      category,
+      guildId,
+      sql,
+    })
+    return subscribers
+  } else {
+    return []
+  }
 }

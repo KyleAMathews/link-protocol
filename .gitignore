@@ -139,3 +139,5 @@ node_modules
 /prisma/data.db
 /prisma/data.db-journal
 turso/data.db
+lmdb.db
+lmdb.db-lock

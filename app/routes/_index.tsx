@@ -1,17 +1,17 @@
-import * as React from "react";
-import type { V2_MetaFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { Link } from "@remix-run/react";
-import { useLoaderData } from "@remix-run/react";
-import { sortBy, sumBy, groupBy } from "lodash";
+import * as React from "react"
+import type { V2_MetaFunction } from "@remix-run/node"
+import { json } from "@remix-run/node"
+import { Link } from "@remix-run/react"
+import { useLoaderData } from "@remix-run/react"
+import { sortBy, sumBy, groupBy } from "lodash"
 
 // Kyle's test server.
 // const guildId = `1113425261128593550`;
 // SOP
-const guildId = `1082444651946049567`;
+const guildId = `1082444651946049567`
 
 export const loader = async () => {
-  const { turso } = require(`../db.server.ts`);
+  const { turso } = require(`../db.server.ts`)
   const messages = await turso.execute({
     sql: `
   SELECT 
@@ -28,17 +28,17 @@ ORDER BY
     date DESC;
 `,
     args: [guildId],
-  });
+  })
   const parsedMessages = messages.rows.map((message) => {
     const newMessage = {
       ...message,
       links: JSON.parse(message.links),
       reactions: JSON.parse(message.reactions),
-    };
+    }
 
-    return newMessage;
-  });
-  const links = [];
+    return newMessage
+  })
+  const links = []
   parsedMessages.forEach((message) => {
     message.links.forEach((link) =>
       links.push({
@@ -48,24 +48,24 @@ ORDER BY
         channelId: message.channelId,
         messageId: message.messageId,
       })
-    );
-  });
+    )
+  })
 
   const sortedLinks = sortBy(links, (link) =>
     sumBy(link.reactions, (reaction) => reaction.count)
-  ).reverse();
+  ).reverse()
   return json({
     links: sortBy(
       Object.entries(groupBy(sortedLinks, `date`)),
       ([date]) => date
     ).reverse(),
-  });
-};
+  })
+}
 
-export const meta: V2_MetaFunction = () => [{ title: `Latest links` }];
+export const meta: V2_MetaFunction = () => [{ title: `Latest links` }]
 
 export default function Index() {
-  const data = useLoaderData<typeof loader>();
+  const data = useLoaderData<typeof loader>()
   // console.log(data);
   return (
     <main className="relative min-h-screen bg-white sm:flex">
@@ -80,7 +80,10 @@ export default function Index() {
                 return (
                   <div>
                     -{` `}
-                    <a className="underline decoration-gray-400 decoration-dotted" href={link.link}>
+                    <a
+                      className="underline decoration-gray-400 decoration-dotted"
+                      href={link.link}
+                    >
                       {link.link}
                     </a>
                     {` `}
@@ -99,12 +102,12 @@ export default function Index() {
                       </a>
                     </span>
                   </div>
-                );
+                )
               })}
             </div>
-          );
+          )
         })}
       </div>
     </main>
-  );
+  )
 }
