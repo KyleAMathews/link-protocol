@@ -101,7 +101,7 @@ const deleteMessage = async (messageId) => {
 }
 exports.deleteMessage = deleteMessage
 
-exports.upsertMessage = async (message) => {
+const upsertMessage = async (message) => {
   const { turso } = require(`../app/db.server.ts`)
   let result
   try {
@@ -146,6 +146,8 @@ ON CONFLICT (messageId) DO UPDATE SET
 
   return result
 }
+
+exports.upsertMessage = upsertMessage
 
 exports.createSubscriptions = async ({ categories, userId, guildId, sql }) => {
   // Delete any existing subscriptions for the user first.
