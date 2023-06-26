@@ -2,16 +2,17 @@ import * as React from "react"
 import type { V2_MetaFunction } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { Link } from "@remix-run/react"
-import { useLoaderData } from "@remix-run/react"
+import { useLoaderData, useParams } from "@remix-run/react"
 import { sortBy, sumBy, groupBy } from "lodash"
 import opentelemetry from "@opentelemetry/api"
 
 // Kyle's test server.
 // const guildId = `1113425261128593550`;
 // SOP
-const guildId = `1082444651946049567`
+// const guildId = `1082444651946049567`
 
-export const loader = async () => {
+export const loader = async (props) => {
+  const guildId = props.params.guildId
   const tracer = opentelemetry.trace.getTracer(`remix`)
   return tracer.startActiveSpan(`route._index.loader`, async (span) => {
     span.setAttribute(`discord.guildId`, guildId)
@@ -80,9 +81,9 @@ ORDER BY
 
 export const meta: V2_MetaFunction = () => [{ title: `Latest links` }]
 
-export default function Index() {
+export default function Links() {
+  const { guildId } = useParams()
   const data = useLoaderData<typeof loader>()
-  // console.log(data);
   return (
     <main className="relative min-h-screen bg-white sm:flex">
       <div className="relative sm:p-8">

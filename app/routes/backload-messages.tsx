@@ -1,39 +1,39 @@
-import * as React from "react";
-import { json } from "@remix-run/node";
-import { useLoaderData, useActionData, Form } from "@remix-run/react";
-import { getServers, getOldMessagesForGuild } from "../models/note.server.ts";
+import * as React from "react"
+import { json } from "@remix-run/node"
+import { useLoaderData, useActionData, Form } from "@remix-run/react"
+import { getServers, getOldMessagesForGuild } from "../models/note.server.ts"
 
 // Loaders only run on the server and provide data
 // to your component on GET requests
 export async function loader() {
-  const servers = await getServers();
-  return json(servers);
+  const servers = await getServers()
+  return json(servers)
 }
 
 // Actions only run on the server and handle POST
 // PUT, PATCH, and DELETE. They can also provide data
 // to the component
 export async function action({ request }: ActionArgs) {
-  const form = await request.formData();
-  const guildId = form.get(`guildId`);
-  const guildName = form.get(`guildName`);
-  console.log(`fetching old messages for`, { guildId, guildName });
-  getOldMessagesForGuild(guildId);
+  const form = await request.formData()
+  const guildId = form.get(`guildId`)
+  const guildName = form.get(`guildName`)
+  console.log(`fetching old messages for`, { guildId, guildName })
+  getOldMessagesForGuild(guildId)
   // const errors = validate(form);
   // if (errors) {
   // return json({ errors });
   // }
   // await createProject({ title: form.get("title") });
-  return json({ guildId });
+  return json({ guildId })
 }
 
 // The default export is the component that will be
 // rendered when a route matches the URL. This runs
 // both on the server and the client
 export default function Projects() {
-  const guilds = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
-  console.log({ guilds, actionData });
+  const guilds = useLoaderData<typeof loader>()
+  const actionData = useActionData<typeof action>()
+  console.log({ guilds, actionData })
 
   // TODO if loading is happening, loop until it's done.
 
@@ -54,9 +54,9 @@ export default function Projects() {
                 <button type="submit">load old messages</button>
               </Form>
             </div>
-          );
+          )
         })}
       </div>
     </main>
-  );
+  )
 }
