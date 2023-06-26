@@ -60,6 +60,11 @@ module.exports = {
         .setDescription(
           `Subscribe to updates for people adding categories to shared links.`
         )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName(`get-links-page`)
+        .setDescription(`Return the URL to the links page for this server.`)
     ),
   async execute(interaction) {
     const { turso } = require(`../../../app/db.server.ts`)
@@ -141,6 +146,16 @@ module.exports = {
           } finally {
             span.end()
           }
+        }
+      )
+    } else if (interaction.options._subcommand === `get-links-page`) {
+      await tracer.startActiveSpan(
+        `discord.InteractionCreate.link-protocol.get-links-page`,
+        async (span) => {
+          await interaction.reply(
+            `https://link-protocol-bot.fly.dev/server/${interaction.guild.id}`
+          )
+          span.end()
         }
       )
     }
