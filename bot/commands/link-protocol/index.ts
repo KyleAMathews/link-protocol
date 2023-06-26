@@ -12,27 +12,33 @@ const tracer = opentelemetry.trace.getTracer(`discord`)
 
 const categories = [
   {
-    emoji: `📊`,
+    emoji: `SoP`,
+    display: `☀️`,
     label: `Organizational Protocols`,
   },
   {
-    emoji: `🕯️`,
+    emoji: `deathmemory`,
+    display: `🕯️`,
     label: `Death Memory`,
   },
   {
-    emoji: `🕸️`,
+    emoji: `creditprotocols`,
+    display: `🕸️`,
     label: `Credit Protocols`,
   },
   {
-    emoji: `🔧`,
+    emoji: `techstandards`,
+    display: `🔧`,
     label: `Tech Standards`,
   },
   {
-    emoji: `🧠`,
+    emoji: `unconsciousprotocols`,
+    display: `🧠`,
     label: `Unconscious Protocols`,
   },
   {
-    emoji: `🏙️`,
+    emoji: `builtenvironment`,
+    display: `🏙️`,
     label: `Built Environment`,
   },
 ]
@@ -75,7 +81,7 @@ module.exports = {
               .addOptions(
                 categories.map((category) =>
                   new StringSelectMenuOptionBuilder()
-                    .setLabel(`${category.emoji} ${category.label}`)
+                    .setLabel(`${category.display} ${category.label}`)
                     .setValue(category.emoji)
                     .setDefault(subscriptions.includes(category.emoji))
                 )
