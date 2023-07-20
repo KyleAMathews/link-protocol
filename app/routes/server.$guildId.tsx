@@ -87,6 +87,9 @@ export default function Links() {
   return (
     <main className="relative min-h-screen bg-white sm:flex">
       <div className="relative sm:p-8">
+        <Link to="csv" reloadDocument className="underline">
+          Download CSV of links
+        </Link>
         <h1 className="mb-2 text-3xl font-bold">Links</h1>
         {data.links.map(([date, links]) => {
           return (
