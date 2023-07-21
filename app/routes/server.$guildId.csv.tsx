@@ -45,15 +45,17 @@ ORDER BY
     })
     const links = []
     parsedMessages.forEach((message) => {
-      message.links.forEach((link) =>
-        links.push({
-          link,
-          reactions: message.reactions,
-          date: message.date,
-          channelId: message.channelId,
-          messageId: message.messageId,
-        })
-      )
+      message.links.forEach((link) => {
+        if (!link.includes(`discord.com`)) {
+          links.push({
+            link,
+            reactions: message.reactions,
+            date: message.date,
+            channelId: message.channelId,
+            messageId: message.messageId,
+          })
+        }
+      })
     })
 
     // const sortedLinks = sortBy(links, (link) =>
