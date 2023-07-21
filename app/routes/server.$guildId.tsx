@@ -16,7 +16,7 @@ export const loader = async (props) => {
   const tracer = opentelemetry.trace.getTracer(`remix`)
   return tracer.startActiveSpan(`route._index.loader`, async (span) => {
     span.setAttribute(`discord.guildId`, guildId)
-    const { turso } = require(`../db.server.ts`)
+    const { turso, discordClient } = require(`../db.server.ts`)
     const messages = await tracer.startActiveSpan(
       `route._index.loader.query`,
       async (span) => {
@@ -60,6 +60,8 @@ ORDER BY
             reactions: message.reactions,
             date: message.date,
             channelId: message.channelId,
+            channelName: discordClient.channels.cache.get(message.channelId)
+              ?.name,
             messageId: message.messageId,
           })
         }
@@ -115,6 +117,9 @@ export default function Links() {
                         {`, `}
                       </span>
                     ))}
+                    <span className="text-gray-500">
+                      [{link.channelName}]{` `}
+                    </span>
                     <span>
                       <a
                         className="text-blue-500 underline"

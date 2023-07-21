@@ -202,7 +202,6 @@ exports.getSubscribersToNotify = async ({
   const key = `notificationsSent::${category}::${messageId}`
   const sentAlready = lmdb.get(key) || false
   await lmdb.put(key, true)
-  console.log({ key, sentAlready })
   if (!sentAlready) {
     const subscribers = await getSubscribersForCategory({
       category,
